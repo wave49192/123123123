@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ระบบควิซคลังข้อสอบกรณีศึกษาเภสัชกรรม (Local Practice Mode)</title>
+    <title>ระบบควิซคลังข้อสอบกรณีศึกษาเภสัชกรรม</title>
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -768,11 +768,9 @@
 
       // --- APPS INITIATION RUN ---
       async function initApp() {
-        loadFromLocalStorage();
+        loadProgressOnlyFromLocalStorage();
 
-        if (!rawQuestionsList || rawQuestionsList.length === 0) {
-          rawQuestionsList = await autoLoadPLEExcelFiles();
-        }
+        rawQuestionsList = await autoLoadPLEExcelFiles();
 
         if (
           localStorage.getItem("theme") === "dark" ||
@@ -796,12 +794,7 @@
         navUploadBtn.addEventListener("click", () => {
           excelImporter.click();
         });
-
-        navUploadBtn.classList.remove("hidden");
-        openAddModalBtn.classList.remove("hidden");
-        clearStateBtn.classList.remove("hidden");
       }
-
       async function autoLoadPLEExcelFiles() {
         const candidateFiles = [
           "PLE_PC1_2563.xlsx",
@@ -855,7 +848,7 @@
                     E: String(row["Choice E"] || "").trim(),
                   },
                   answer: normalizeAnswer(row["Answer"]),
-                  explanation: "",
+                  explanation: getExplanationFromRow(row),
                 };
               })
               .filter((q) => q.question && q.answer);
@@ -901,6 +894,19 @@
         };
 
         return map[answer] || answer;
+      }
+      function getExplanationFromRow(row) {
+        return String(
+          row["explaination"] ||
+            row["Explaination"] ||
+            row["EXPLAINATION"] ||
+            row["explanation"] ||
+            row["Explanation"] ||
+            row["EXPLANATION"] ||
+            row["เฉลยละเอียด"] ||
+            row["คำอธิบาย"] ||
+            "",
+        ).trim();
       }
 
       // --- COMPILING QUERIES AND FILTERING SYSTEMS ---
@@ -1675,10 +1681,6 @@
       // --- LOCAL STORAGE PERSISTENCE SYSTEMS ---
       function saveToLocalStorage() {
         localStorage.setItem(
-          "local_pharmacy_questionsSet_v4",
-          JSON.stringify(rawQuestionsList),
-        );
-        localStorage.setItem(
           "local_pharmacy_answersState_v4",
           JSON.stringify(answersState),
         );
@@ -1692,8 +1694,7 @@
         );
       }
 
-      function loadFromLocalStorage() {
-        const list = localStorage.getItem("local_pharmacy_questionsSet_v4");
+      function loadProgressOnlyFromLocalStorage() {
         const answers = localStorage.getItem("local_pharmacy_answersState_v4");
         const bookmarks = localStorage.getItem(
           "local_pharmacy_bookmarksState_v4",
@@ -1702,40 +1703,35 @@
           "local_pharmacy_shuffleChoices_v4",
         );
 
-        if (list) rawQuestionsList = JSON.parse(list);
         if (answers) answersState = JSON.parse(answers);
         if (bookmarks) bookmarksState = JSON.parse(bookmarks);
 
         if (shuffle) {
           shuffleChoicesMode = JSON.parse(shuffle);
-          if (shuffleChoicesMode) {
-            shuffleChoicesBtn.className =
-              "flex items-center justify-center space-x-1.5 py-2.5 px-3 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition border border-indigo-200 dark:border-indigo-900/30";
-            shuffleChoicesText.innerText = "สลับชอยส์: เปิด";
-          }
         }
       }
-
       // Wipe database cache and reload defaults
-      clearStateBtn.addEventListener("click", () => {
+      clearStateBtn.addEventListener("click", async () => {
         const confirmed = confirm(
-          "คุณแน่ใจใช่หรือไม่ว่าต้องการล้างประวัติการทำควิซ บุ๊กมาร์กทั้งหมด และรีเซ็ตโจทย์ตั้งต้นกลับมาใหม่?",
+          "คุณแน่ใจใช่หรือไม่ว่าต้องการล้างประวัติการทำควิซและบุ๊กมาร์กทั้งหมด?",
         );
+
         if (confirmed) {
-          localStorage.clear();
+          localStorage.removeItem("local_pharmacy_answersState_v4");
+          localStorage.removeItem("local_pharmacy_bookmarksState_v4");
+          localStorage.removeItem("local_pharmacy_shuffleChoices_v4");
+          localStorage.removeItem("local_pharmacy_questionsSet_v4");
+
           answersState = {};
           bookmarksState = [];
           shuffleChoicesMode = false;
 
-          const embedJsonText =
-            document.getElementById("questions-json").textContent;
-          rawQuestionsList = JSON.parse(embedJsonText);
-          saveToLocalStorage();
+          rawQuestionsList = await autoLoadPLEExcelFiles();
+          syncAppState();
 
-          location.reload();
+          popCustomToast("ล้างความคืบหน้าและโหลด Excel ใหม่แล้ว", "success");
         }
       });
-
       // --- MICRO-INTERACTIONS TOAST NOTIFICATION ---
       function popCustomToast(message, type = "neutral") {
         const oldToast = document.getElementById("app-toast");
