@@ -18,6 +18,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // Status trackers synchronized with LocalStorage
   let answersState = {}; // { id: { selected: "A", correct: true, choiceMapping: [...] } }
   let bookmarksState = []; // [ "1", "2" ] - Bookmarked questionNo IDs
+  let sessionHistoryState = []; // saved quiz sessions
   let filterStatus = "all"; // all, unanswered, correct, incorrect, bookmarked
   let filterCaseId = "all"; // all, or specific Case ID string
   let selectedYear = null;
@@ -93,6 +94,16 @@ window.addEventListener("DOMContentLoaded", () => {
   const appShell = document.getElementById("appShell");
   const yearCardsContainer = document.getElementById("yearCardsContainer");
   const backToYearsBtn = document.getElementById("backToYearsBtn");
+  const saveSessionBtn = document.getElementById("saveSessionBtn");
+  const openHistoryBtn = document.getElementById("openHistoryBtn");
+  const sessionHistoryModal = document.getElementById("sessionHistoryModal");
+  const closeHistoryBtn = document.getElementById("closeHistoryBtn");
+  const historyList = document.getElementById("historyList");
+  const historySummaryText = document.getElementById("historySummaryText");
+  const exportHistoryBtn = document.getElementById("exportHistoryBtn");
+  const importHistoryBtn = document.getElementById("importHistoryBtn");
+  const historyImportInput = document.getElementById("historyImportInput");
+  const clearHistoryBtn = document.getElementById("clearHistoryBtn");
   // Temporary implicit input for excel trigger
   let excelImporter;
 
@@ -203,6 +214,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (landingPage) landingPage.classList.add("hidden");
     if (appShell) appShell.classList.remove("hidden");
     if (backToYearsBtn) backToYearsBtn.classList.remove("hidden");
+    if (saveSessionBtn) saveSessionBtn.classList.remove("hidden");
 
     syncAppState();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -213,6 +225,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (appShell) appShell.classList.add("hidden");
     if (landingPage) landingPage.classList.remove("hidden");
     if (backToYearsBtn) backToYearsBtn.classList.add("hidden");
+    if (saveSessionBtn) saveSessionBtn.classList.add("hidden");
     renderYearLandingPage();
   }
 
@@ -1151,6 +1164,10 @@ window.addEventListener("DOMContentLoaded", () => {
       "local_pharmacy_shuffleChoices_v4",
       JSON.stringify(shuffleChoicesMode),
     );
+    localStorage.setItem(
+      "local_pharmacy_sessionHistory_v1",
+      JSON.stringify(sessionHistoryState),
+    );
   }
 
   function loadProgressOnlyFromLocalStorage() {
@@ -1161,12 +1178,22 @@ window.addEventListener("DOMContentLoaded", () => {
     const shuffle = localStorage.getItem(
       "local_pharmacy_shuffleChoices_v4",
     );
+    const sessions = localStorage.getItem(
+      "local_pharmacy_sessionHistory_v1",
+    );
 
     if (answers) answersState = JSON.parse(answers);
     if (bookmarks) bookmarksState = JSON.parse(bookmarks);
 
     if (shuffle) {
       shuffleChoicesMode = JSON.parse(shuffle);
+    }
+    if (sessions) {
+      try {
+        sessionHistoryState = JSON.parse(sessions) || [];
+      } catch (e) {
+        sessionHistoryState = [];
+      }
     }
   }
   // Wipe database cache and reload defaults
@@ -1192,6 +1219,327 @@ window.addEventListener("DOMContentLoaded", () => {
       popCustomToast("ล้างความคืบหน้าและโหลด Excel ใหม่แล้ว", "success");
     }
   });
+
+  // --- SESSION SAVE / HISTORY ---
+  function buildCurrentSessionSnapshot() {
+    if (!selectedYear) {
+      popCustomToast("กรุณาเลือกปีก่อนบันทึกคะแนน", "error");
+      return null;
+    }
+
+    const yearQuestions = rawQuestionsList.filter((q) => String(q.year) === String(selectedYear));
+    const answeredQuestions = yearQuestions.filter((q) => answersState[q.id]?.selected !== undefined);
+
+    if (answeredQuestions.length === 0) {
+      popCustomToast("ยังไม่มีข้อที่ตอบในรอบนี้", "error");
+      return null;
+    }
+
+    const correctItems = answeredQuestions.filter((q) => answersState[q.id]?.correct);
+    const wrongItems = answeredQuestions.filter((q) => !answersState[q.id]?.correct);
+    const skippedItems = yearQuestions.filter((q) => answersState[q.id]?.selected === undefined);
+
+    return {
+      id: `session-${Date.now()}`,
+      savedAt: new Date().toISOString(),
+      year: String(selectedYear),
+      totalQuestions: yearQuestions.length,
+      answered: answeredQuestions.length,
+      correct: correctItems.length,
+      wrong: wrongItems.length,
+      skipped: skippedItems.length,
+      percent: answeredQuestions.length > 0 ? Math.round((correctItems.length / answeredQuestions.length) * 100) : 0,
+      items: answeredQuestions.map((q) => {
+        const hist = answersState[q.id];
+        return {
+          id: q.id,
+          year: q.year,
+          caseId: q.caseId || "",
+          questionNo: q.questionNo || q.id,
+          question: q.question,
+          choices: q.choices || {},
+          selected: hist.selected,
+          answer: q.answer,
+          correct: !!hist.correct,
+          explanation: q.explanation || "",
+        };
+      }),
+    };
+  }
+
+  function saveCurrentSession() {
+    const snapshot = buildCurrentSessionSnapshot();
+    if (!snapshot) return;
+
+    sessionHistoryState.unshift(snapshot);
+    sessionHistoryState = sessionHistoryState.slice(0, 100);
+    saveToLocalStorage();
+    renderYearLandingPage();
+    popCustomToast(`บันทึกคะแนนปี ${snapshot.year} แล้ว: ถูก ${snapshot.correct}/${snapshot.answered}`, "success");
+  }
+
+  function formatThaiDateTime(iso) {
+    try {
+      return new Date(iso).toLocaleString("th-TH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function renderSessionHistory() {
+    if (!historyList) return;
+
+    if (!sessionHistoryState.length) {
+      historySummaryText.innerText = "ยังไม่มีประวัติการบันทึกคะแนน";
+      historyList.innerHTML = `
+        <div class="text-center py-10 text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-3xl">
+          <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+          <p class="font-bold">ยังไม่มี session ที่บันทึกไว้</p>
+        </div>
+      `;
+      return;
+    }
+
+    historySummaryText.innerText = `มีประวัติทั้งหมด ${sessionHistoryState.length} ครั้ง`;
+    historyList.innerHTML = sessionHistoryState.map((session) => {
+      const wrongList = session.items.filter((item) => !item.correct);
+      const wrongHtml = wrongList.length
+        ? wrongList.map((item) => renderWrongHistoryItem(session, item)).join("")
+        : `<li class="rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 p-3 text-xs font-bold text-emerald-600 dark:text-emerald-400">ไม่มีข้อผิดในรอบนี้</li>`;
+
+      return `
+        <details class="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40 overflow-hidden">
+          <summary class="cursor-pointer list-none p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p class="text-xs text-slate-400 font-bold">${formatThaiDateTime(session.savedAt)}</p>
+              <h4 class="text-base font-extrabold text-slate-800 dark:text-white">ปี ${session.year} — ถูก ${session.correct}/${session.answered} (${session.percent}%)</h4>
+              <p class="text-xs text-slate-400 mt-1">ผิด ${session.wrong} / ข้าม ${session.skipped} / ทั้งหมด ${session.totalQuestions}</p>
+            </div>
+            <div class="flex gap-2 items-center">
+              <span class="px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-xs font-extrabold">${session.percent}%</span>
+              <button type="button" data-delete-session="${session.id}" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold">ลบ</button>
+            </div>
+          </summary>
+          <div class="px-4 sm:px-5 pb-5 space-y-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3"><p class="font-extrabold">${session.answered}</p><p class="text-[10px] text-slate-400 font-bold">ทำแล้ว</p></div>
+              <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3"><p class="font-extrabold text-emerald-500">${session.correct}</p><p class="text-[10px] text-slate-400 font-bold">ถูก</p></div>
+              <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3"><p class="font-extrabold text-rose-500">${session.wrong}</p><p class="text-[10px] text-slate-400 font-bold">ผิด</p></div>
+              <div class="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3"><p class="font-extrabold text-slate-500">${session.skipped}</p><p class="text-[10px] text-slate-400 font-bold">ยังไม่ทำ</p></div>
+            </div>
+            <div>
+              <p class="text-xs font-extrabold text-slate-400 uppercase mb-2">ข้อที่ผิด</p>
+              <ul class="space-y-2">${wrongHtml}</ul>
+            </div>
+          </div>
+        </details>
+      `;
+    }).join("");
+
+    historyList.querySelectorAll("[data-delete-session]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        sessionHistoryState = sessionHistoryState.filter((s) => s.id !== btn.dataset.deleteSession);
+        saveToLocalStorage();
+        renderSessionHistory();
+        renderYearLandingPage();
+      });
+    });
+
+    historyList.querySelectorAll("[data-review-question]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        reviewHistoryQuestion(btn.dataset.reviewQuestion);
+      });
+    });
+  }
+
+
+  function getQuestionForSessionItem(session, item) {
+    return rawQuestionsList.find((q) =>
+      String(q.year) === String(session.year) &&
+      (String(q.id) === String(item.id) || String(q.questionNo) === String(item.questionNo))
+    );
+  }
+
+  function getChoiceReviewHtml(session, item) {
+    const sourceQuestion = getQuestionForSessionItem(session, item);
+    const choices = item.choices && Object.keys(item.choices).length ? item.choices : (sourceQuestion?.choices || {});
+    const keys = ["A", "B", "C", "D", "E"].filter((key) => choices[key]);
+
+    if (!keys.length) {
+      return `<div class="text-xs text-slate-400 mt-3">ไม่มีข้อมูลตัวเลือกใน session นี้</div>`;
+    }
+
+    return `
+      <div class="mt-3 space-y-2">
+        ${keys.map((key) => {
+          const isSelected = String(item.selected) === key;
+          const isAnswer = String(item.answer) === key;
+          let className = "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300";
+          let badge = "";
+
+          if (isAnswer) {
+            className = "border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300";
+            badge = `<span class="text-[10px] font-extrabold px-2 py-1 rounded-full bg-emerald-500 text-white">เฉลย</span>`;
+          }
+
+          if (isSelected && !isAnswer) {
+            className = "border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300";
+            badge = `<span class="text-[10px] font-extrabold px-2 py-1 rounded-full bg-rose-500 text-white">ที่ตอบ</span>`;
+          } else if (isSelected && isAnswer) {
+            badge = `<span class="text-[10px] font-extrabold px-2 py-1 rounded-full bg-emerald-500 text-white">ตอบถูก</span>`;
+          }
+
+          return `
+            <div class="rounded-xl border ${className} p-3 flex gap-3 items-start">
+              <span class="w-7 h-7 rounded-lg bg-slate-900/5 dark:bg-white/10 flex items-center justify-center font-extrabold text-xs shrink-0">${key}</span>
+              <div class="flex-1 text-xs leading-6">${escapeHtml(choices[key])}</div>
+              <div class="shrink-0">${badge}</div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  function renderWrongHistoryItem(session, item) {
+    return `
+      <li class="rounded-2xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 p-4">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+          <div class="space-y-1">
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="text-xs font-extrabold text-rose-600 dark:text-rose-400">ข้อ ${item.questionNo}</span>
+              <span class="text-[11px] text-slate-400">Case ${item.caseId || "-"}</span>
+              <span class="text-[11px] text-slate-400">ตอบ ${item.selected} / เฉลย ${item.answer}</span>
+            </div>
+            <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-7">${escapeHtml(item.question)}</p>
+          </div>
+          <button
+            type="button"
+            data-review-question="${session.id}::${item.id}"
+            class="shrink-0 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold transition"
+          >
+            ไปดูข้อนี้
+          </button>
+        </div>
+        ${getChoiceReviewHtml(session, item)}
+        ${item.explanation ? `
+          <div class="mt-3 rounded-xl bg-white/70 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 p-3">
+            <p class="text-[10px] font-extrabold text-slate-400 uppercase mb-1">คำอธิบาย</p>
+            <p class="text-xs leading-6 text-slate-600 dark:text-slate-300">${escapeHtml(item.explanation)}</p>
+          </div>
+        ` : ""}
+      </li>
+    `;
+  }
+
+  function reviewHistoryQuestion(token) {
+    const [sessionId, itemId] = String(token || "").split("::");
+    const session = sessionHistoryState.find((s) => String(s.id) === String(sessionId));
+    if (!session) return;
+
+    const item = session.items.find((entry) => String(entry.id) === String(itemId));
+    if (!item) return;
+
+    selectedYear = String(session.year);
+    filterStatus = "all";
+    filterCaseId = "all";
+    searchString = "";
+
+    if (searchTerm) searchTerm.value = "";
+    if (statusFilter) statusFilter.value = "all";
+    if (caseFilter) caseFilter.value = "all";
+
+    if (landingPage) landingPage.classList.add("hidden");
+    if (appShell) appShell.classList.remove("hidden");
+    if (backToYearsBtn) backToYearsBtn.classList.remove("hidden");
+    if (sessionHistoryModal) sessionHistoryModal.classList.add("hidden");
+
+    syncAppState();
+
+    const targetIndex = filteredQuestions.findIndex((q) =>
+      String(q.id) === String(item.id) ||
+      String(q.questionNo) === String(item.questionNo)
+    );
+
+    if (targetIndex > -1) {
+      currentIndex = targetIndex;
+      renderActiveQuestionLayout();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      popCustomToast(`เปิดปี ${session.year} ข้อ ${item.questionNo}`, "info");
+    }
+  }
+
+  function openSessionHistory() {
+    renderSessionHistory();
+    if (sessionHistoryModal) sessionHistoryModal.classList.remove("hidden");
+  }
+
+  function closeSessionHistory() {
+    if (sessionHistoryModal) sessionHistoryModal.classList.add("hidden");
+  }
+
+  function exportSessionHistory() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: "pharmacy-case-quiz",
+      version: 1,
+      sessions: sessionHistoryState,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pharmacy-quiz-history-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importSessionHistory(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const payload = JSON.parse(event.target.result);
+        const incoming = Array.isArray(payload) ? payload : payload.sessions;
+        if (!Array.isArray(incoming)) throw new Error("Invalid history file");
+
+        const byId = new Map(sessionHistoryState.map((item) => [item.id, item]));
+        incoming.forEach((item) => {
+          if (item && item.id) byId.set(item.id, item);
+        });
+        sessionHistoryState = Array.from(byId.values()).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))).slice(0, 100);
+        saveToLocalStorage();
+        renderSessionHistory();
+        renderYearLandingPage();
+        popCustomToast("นำเข้าประวัติสำเร็จ", "success");
+      } catch (err) {
+        popCustomToast("ไฟล์ประวัติไม่ถูกต้อง", "error");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   // --- MICRO-INTERACTIONS TOAST NOTIFICATION ---
   function popCustomToast(message, type = "neutral") {
     const oldToast = document.getElementById("app-toast");
@@ -1226,6 +1574,37 @@ window.addEventListener("DOMContentLoaded", () => {
 
   if (backToYearsBtn) {
     backToYearsBtn.addEventListener("click", showLandingPage);
+  }
+  if (saveSessionBtn) {
+    saveSessionBtn.addEventListener("click", saveCurrentSession);
+  }
+  if (openHistoryBtn) {
+    openHistoryBtn.addEventListener("click", openSessionHistory);
+  }
+  if (closeHistoryBtn) {
+    closeHistoryBtn.addEventListener("click", closeSessionHistory);
+  }
+  if (sessionHistoryModal) {
+    sessionHistoryModal.addEventListener("click", (event) => {
+      if (event.target === sessionHistoryModal) closeSessionHistory();
+    });
+  }
+  if (exportHistoryBtn) {
+    exportHistoryBtn.addEventListener("click", exportSessionHistory);
+  }
+  if (importHistoryBtn && historyImportInput) {
+    importHistoryBtn.addEventListener("click", () => historyImportInput.click());
+    historyImportInput.addEventListener("change", (event) => importSessionHistory(event.target.files[0]));
+  }
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener("click", () => {
+      if (!confirm("ลบประวัติการบันทึกคะแนนทั้งหมดใช่ไหม?")) return;
+      sessionHistoryState = [];
+      saveToLocalStorage();
+      renderSessionHistory();
+      renderYearLandingPage();
+      popCustomToast("ลบประวัติทั้งหมดแล้ว", "success");
+    });
   }
 
   // --- DARK MODE THEME CONTROLS ---

@@ -1,0 +1,1786 @@
+<!doctype html>
+<html lang="th" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ระบบควิซคลังข้อสอบกรณีศึกษาเภสัชกรรม</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sarabun: ["Sarabun", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <!-- FontAwesome Icons (CDN) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts (Sarabun) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- SheetJS for Offline Excel & CSV Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+      body {
+        font-family: "Sarabun", sans-serif;
+      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 min-h-screen flex flex-col"
+  >
+    <!-- TOP NAVIGATION BAR -->
+    <header
+      class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors shadow-sm"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
+      >
+        <div class="flex items-center space-x-3">
+          <div
+            class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-200 dark:shadow-none"
+          >
+            <i class="fa-solid fa-laptop-code text-lg"></i>
+          </div>
+          <div>
+            <h1
+              class="font-extrabold text-sm sm:text-base md:text-lg tracking-tight bg-gradient-to-r from-indigo-600 to-violet-500 bg-clip-text text-transparent"
+            >
+              Pharmacy Case Quiz (Local)
+            </h1>
+            <p
+              class="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:block font-medium"
+            >
+              โหมดจำลองสอบและคลังข้อมูลกรณีศึกษาออฟไลน์
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Change File Dataset -->
+          <button
+            id="navUploadBtn"
+            class="flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-3 py-2 rounded-xl text-xs font-semibold border border-emerald-200 dark:border-emerald-900/30 transition"
+          >
+            <i class="fa-solid fa-file-excel"></i>
+            <span>นำเข้า Excel/CSV</span>
+          </button>
+
+          <!-- Add Case & Question Manual Button -->
+          <button
+            id="openAddModalBtn"
+            class="flex items-center space-x-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-3 py-2 rounded-xl text-xs font-semibold border border-indigo-200 dark:border-indigo-900/30 transition"
+          >
+            <i class="fa-solid fa-plus-circle"></i>
+            <span>เพิ่มโจทย์/Case</span>
+          </button>
+
+          <!-- Dark Mode Toggle -->
+          <button
+            id="themeToggler"
+            class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition"
+            aria-label="Toggle Theme"
+          >
+            <i id="themeIcon" class="fa-solid fa-moon text-sm"></i>
+          </button>
+
+          <!-- Reset Cache Button -->
+          <button
+            id="clearStateBtn"
+            class="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 transition text-sm"
+            title="ล้างความคืบหน้า"
+          >
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN APP LAYOUT -->
+    <main
+      class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col justify-start"
+    >
+      <!-- SCOREBOARD & STATS OVERVIEW -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div
+          class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4"
+        >
+          <div
+            class="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
+          >
+            <i class="fa-solid fa-clipboard-question text-xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+              ทำข้อสอบไปแล้ว
+            </p>
+            <p id="statsAnswered" class="text-xl font-bold dark:text-white">
+              0/0
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4"
+        >
+          <div
+            class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
+          >
+            <i class="fa-solid fa-square-check text-xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+              ตอบถูกต้อง
+            </p>
+            <p
+              id="statsCorrect"
+              class="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-bold"
+            >
+              0
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4"
+        >
+          <div
+            class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400"
+          >
+            <i class="fa-solid fa-square-xmark text-xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+              ตอบผิดพลาด
+            </p>
+            <p
+              id="statsWrong"
+              class="text-xl font-bold text-rose-600 dark:text-rose-400 font-bold"
+            >
+              0
+            </p>
+          </div>
+        </div>
+
+        <div
+          class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center space-x-4"
+        >
+          <div
+            class="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+          >
+            <i class="fa-solid fa-percent text-xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-medium">
+              สัดส่วนตอบถูก
+            </p>
+            <p id="statsPercent" class="text-xl font-bold text-amber-500">0%</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISUAL LINEAR PROGRESS BAR -->
+      <div
+        class="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-6 overflow-hidden"
+      >
+        <div
+          id="linearProgressBar"
+          class="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2 rounded-full transition-all duration-300 w-0"
+        ></div>
+      </div>
+
+      <!-- MAIN LAYOUT GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+        <!-- LEFT COLUMN: SIDEBAR FILTERS & NAVIGATION GRID -->
+        <aside class="lg:col-span-4 space-y-4">
+          <!-- SEARCH, FILTERS & CONTROL TOOLS -->
+          <div
+            class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4"
+          >
+            <h3
+              class="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between"
+            >
+              <span>แผงควบคุม & ตัวกรอง</span>
+              <i class="fa-solid fa-sliders text-slate-400"></i>
+            </h3>
+
+            <!-- SEARCH BAR -->
+            <div class="relative">
+              <input
+                type="text"
+                id="searchTerm"
+                placeholder="พิมพ์ข้อสอบ, คีย์เวิร์ด หรือหัวเคส..."
+                class="w-full pl-9 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition dark:text-white font-medium"
+              />
+              <i
+                class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"
+              ></i>
+            </div>
+
+            <!-- DROPDOWN FILTERS -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  for="statusFilter"
+                  class="block text-xs font-bold text-slate-400 mb-1"
+                  >สถานะ</label
+                >
+                <select
+                  id="statusFilter"
+                  class="w-full px-2.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500 transition dark:text-white font-medium"
+                >
+                  <option value="all">ทั้งหมด</option>
+                  <option value="unanswered">ยังไม่ทำ</option>
+                  <option value="correct">ตอบถูก</option>
+                  <option value="incorrect">ตอบผิด</option>
+                  <option value="bookmarked">Bookmarks</option>
+                </select>
+              </div>
+              <div>
+                <label
+                  for="caseFilter"
+                  class="block text-xs font-bold text-slate-400 mb-1"
+                  >ตามเคสผู้ป่วย</label
+                >
+                <select
+                  id="caseFilter"
+                  class="w-full px-2.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500 transition dark:text-white font-medium"
+                >
+                  <option value="all">ทุก Case</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- UTILITY BUTTONS -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <button
+                id="shuffleQsBtn"
+                class="flex items-center justify-center space-x-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition"
+              >
+                <i class="fa-solid fa-shuffle text-indigo-500"></i>
+                <span class="dark:text-slate-100">สลับโจทย์</span>
+              </button>
+              <button
+                id="shuffleChoicesBtn"
+                class="flex items-center justify-center space-x-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition"
+              >
+                <i class="fa-solid fa-arrows-spin text-emerald-500"></i>
+                <span id="shuffleChoicesText" class="dark:text-slate-100"
+                  >สลับชอยส์: ปิด</span
+                >
+              </button>
+            </div>
+          </div>
+
+          <!-- NAVIGATION MATRIX GRID -->
+          <div
+            class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <h3
+                class="text-sm font-bold text-slate-400 uppercase tracking-wider"
+              >
+                สารบัญข้อสอบ
+              </h3>
+              <span
+                id="renderedGridCount"
+                class="text-xs bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full font-bold"
+                >0 / 0</span
+              >
+            </div>
+            <div
+              id="gridNavigator"
+              class="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-5 gap-2 max-h-[300px] overflow-y-auto pr-1"
+            >
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </aside>
+
+        <!-- RIGHT COLUMN: SPLIT-SCREEN CASE STUDY & WORDWORKSPACE -->
+        <section class="lg:col-span-8 flex flex-col space-y-6">
+          <!-- PATIENT CASE SCENARIO PANEL (Active when caseDescription exists) -->
+          <div
+            id="caseScenarioCard"
+            class="bg-gradient-to-br from-indigo-50/20 via-slate-50 to-indigo-50/10 dark:from-slate-800 dark:to-slate-800 p-6 rounded-3xl border border-indigo-100 dark:border-slate-700/60 shadow-sm relative overflow-hidden hidden"
+          >
+            <div
+              class="absolute -right-8 -top-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl"
+            ></div>
+            <div
+              class="flex items-center space-x-2.5 mb-3 text-indigo-600 dark:text-indigo-400"
+            >
+              <i class="fa-solid fa-file-waveform text-lg animate-pulse"></i>
+              <h3 class="text-sm font-extrabold uppercase tracking-wide">
+                สถานการณ์และผลการตรวจกรณีศึกษาผู้ป่วย (<span
+                  id="caseHeaderLabel"
+                  >Case 1</span
+                >)
+              </h3>
+            </div>
+            <p
+              id="caseDescriptionText"
+              class="text-sm sm:text-base leading-relaxed text-slate-700 dark:text-slate-200 font-medium whitespace-pre-line bg-white/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-indigo-100/40 dark:border-slate-700"
+            >
+              ...
+            </p>
+          </div>
+
+          <!-- CORE QUESTION INTERACT CARD -->
+          <div
+            class="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between min-h-[360px] relative transition-colors"
+          >
+            <!-- WORKSPACE INTERFACE HEADER -->
+            <div
+              class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700 mb-6"
+            >
+              <div class="flex items-center space-x-2">
+                <span
+                  class="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs font-extrabold px-3 py-1.5 rounded-full tracking-wide"
+                >
+                  คำถามข้อที่ <span id="displayIndex">0</span> จาก
+                  <span id="displayTotal">0</span>
+                </span>
+                <span
+                  id="questionIdBadge"
+                  class="text-slate-400 text-xs font-semibold"
+                ></span>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <button
+                  id="editQuestionBtn"
+                  class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 text-slate-500 dark:text-slate-300 transition"
+                  title="แก้ไขข้อนี้"
+                >
+                  <i class="fa-solid fa-pen-to-square text-sm"></i>
+                </button>
+                <button
+                  id="bookmarkButton"
+                  class="p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 text-slate-400 hover:text-amber-500 transition-all duration-150"
+                  title="Bookmark ข้อนี้"
+                >
+                  <i class="fa-regular fa-bookmark text-sm"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- WORD PROMPT STATEMENT -->
+            <div class="flex-1">
+              <h2
+                id="activeQuestionText"
+                class="text-lg sm:text-xl font-bold leading-relaxed text-slate-800 dark:text-white mb-6"
+              >
+                ...
+              </h2>
+              <div id="choicesContainer" class="space-y-3.5 mb-6">
+                <!-- Dynamic choices list -->
+              </div>
+            </div>
+
+            <!-- EXPLANATION FEEDBACK PANEL -->
+            <div
+              id="explanationBox"
+              class="hidden rounded-2xl p-5 mb-6 transition-all duration-300"
+            >
+              <!-- Populated on choice select -->
+            </div>
+
+            <!-- CONTROL ACTION BAR FOOTER -->
+            <div
+              class="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-700 mt-6"
+            >
+              <button
+                id="prevQuestionBtn"
+                class="flex items-center space-x-2 px-5 py-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition disabled:opacity-45 disabled:cursor-not-allowed"
+              >
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>ย้อนกลับ</span>
+              </button>
+
+              <button
+                id="nextQuestionBtn"
+                class="flex items-center space-x-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold shadow-md shadow-indigo-100 dark:shadow-none transition disabled:opacity-45 disabled:cursor-not-allowed"
+              >
+                <span>ข้อถัดไป</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- MANUAL CASE EDITOR POPUP MODAL -->
+    <div
+      id="caseEditorModal"
+      class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 animate-fadeIn"
+    >
+      <div
+        class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh] overflow-hidden transition-all duration-300 transform scale-95 opacity-0"
+        id="modalContainer"
+      >
+        <div
+          class="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-indigo-50/50 to-white dark:from-slate-800 dark:to-slate-800"
+        >
+          <div class="flex items-center space-x-2">
+            <i
+              class="fa-solid fa-edit text-indigo-600 dark:text-indigo-400 text-lg"
+            ></i>
+            <h3
+              id="modalTitle"
+              class="text-base sm:text-lg font-extrabold text-slate-800 dark:text-white"
+            >
+              เพิ่มกรณีศึกษา / โจทย์ใหม่
+            </h3>
+          </div>
+          <button
+            id="closeModalBtn"
+            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Modal Inputs Form -->
+        <form id="caseForm" class="p-6 overflow-y-auto space-y-5 text-sm">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                for="formYear"
+                class="block text-xs font-bold text-slate-400 uppercase mb-1"
+                >ปี พ.ศ. (Year)</label
+              >
+              <input
+                type="text"
+                id="formYear"
+                placeholder="เช่น 2563"
+                class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                required
+              />
+            </div>
+            <div>
+              <label
+                for="formCaseId"
+                class="block text-xs font-bold text-slate-400 uppercase mb-1"
+                >เลขกรณีศึกษา (Case No)</label
+              >
+              <input
+                type="text"
+                id="formCaseId"
+                placeholder="เช่น 1 (เว้นว่างไว้หากไม่มีเคส)"
+                class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              for="formCaseDescription"
+              class="block text-xs font-bold text-slate-400 uppercase mb-1"
+              >รายละเอียดกรณีศึกษา / ข้อมูลผู้ป่วย (Case Description)</label
+            >
+            <textarea
+              id="formCaseDescription"
+              rows="4"
+              placeholder="ระบุอาการ ผลวิเคราะห์ หรือค่าแล็บต่างๆ ที่จะแสดงให้เห็นเมื่อเปิดข้อที่เชื่อมกับเคสนี้..."
+              class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-4 gap-4">
+            <div class="col-span-1">
+              <label
+                for="formQuestionNo"
+                class="block text-xs font-bold text-slate-400 uppercase mb-1"
+                >เลขข้อ (Q.No)</label
+              >
+              <input
+                type="number"
+                id="formQuestionNo"
+                placeholder="เช่น 1"
+                class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                required
+              />
+            </div>
+            <div class="col-span-3">
+              <label
+                for="formQuestionText"
+                class="block text-xs font-bold text-slate-400 uppercase mb-1"
+                >โจทย์คำถาม (Question)</label
+              >
+              <input
+                type="text"
+                id="formQuestionText"
+                placeholder="ระบุโจทย์หลัก..."
+                class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Input choices -->
+          <div class="space-y-2.5">
+            <span class="block text-xs font-bold text-slate-400 uppercase mb-1"
+              >ตัวเลือกตอบ (Choices)</span
+            >
+            <div class="grid grid-cols-1 gap-2">
+              <div class="flex items-center space-x-2">
+                <span
+                  class="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 dark:text-white"
+                  >A</span
+                >
+                <input
+                  type="text"
+                  id="formChoiceA"
+                  placeholder="ตัวเลือก A"
+                  class="flex-1 p-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs dark:text-white"
+                  required
+                />
+              </div>
+              <div class="flex items-center space-x-2">
+                <span
+                  class="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 dark:text-white"
+                  >B</span
+                >
+                <input
+                  type="text"
+                  id="formChoiceB"
+                  placeholder="ตัวเลือก B"
+                  class="flex-1 p-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs dark:text-white"
+                  required
+                />
+              </div>
+              <div class="flex items-center space-x-2">
+                <span
+                  class="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 dark:text-white"
+                  >C</span
+                >
+                <input
+                  type="text"
+                  id="formChoiceC"
+                  placeholder="ตัวเลือก C"
+                  class="flex-1 p-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs dark:text-white"
+                  required
+                />
+              </div>
+              <div class="flex items-center space-x-2">
+                <span
+                  class="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 dark:text-white"
+                  >D</span
+                >
+                <input
+                  type="text"
+                  id="formChoiceD"
+                  placeholder="ตัวเลือก D"
+                  class="flex-1 p-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs dark:text-white"
+                  required
+                />
+              </div>
+              <div class="flex items-center space-x-2">
+                <span
+                  class="w-7 h-7 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 dark:text-white"
+                  >E</span
+                >
+                <input
+                  type="text"
+                  id="formChoiceE"
+                  placeholder="ตัวเลือก E"
+                  class="flex-1 p-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs dark:text-white"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Answer and explanation -->
+          <div class="grid grid-cols-3 gap-4">
+            <div class="col-span-1">
+              <label
+                for="formAnswer"
+                class="block text-xs font-bold text-slate-400 uppercase mb-1"
+                >เฉลยข้อที่ถูกต้อง</label
+              >
+              <select
+                id="formAnswer"
+                class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                required
+              >
+                <option value="A">A / ก</option>
+                <option value="B">B / ข</option>
+                <option value="C">C / ค</option>
+                <option value="D">D / ง</option>
+                <option value="E">E / จ</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label
+                for="formExplanation"
+                class="block text-xs font-bold text-slate-400 uppercase mb-1"
+                >เฉลยละเอียด / คำอธิบายเพิ่มเติม</label
+              >
+              <input
+                type="text"
+                id="formExplanation"
+                placeholder="ระบุเหตุผล ข้อดีข้อแนะนำประกอบ..."
+                class="w-full p-2.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <!-- Edit state tracker -->
+          <input type="hidden" id="editOriginalNo" value="" />
+
+          <div
+            class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-700"
+          >
+            <button
+              type="button"
+              id="cancelFormBtn"
+              class="px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition"
+            >
+              บันทึกโจทย์
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- PRE-LOADED DATA EMBED (Contains questions from your real dataset!) -->
+
+    <!-- CORE ENGINE CODES -->
+    <script>
+      // --- MEMORY OBJECTS STATES ---
+      let rawQuestionsList = []; // Imported spreadsheet data database
+      let filteredQuestions = []; // Current active viewport filtered list
+      let currentIndex = 0; // Chosen question index in filteredQuestions array
+
+      // Status trackers synchronized with LocalStorage
+      let answersState = {}; // { id: { selected: "A", correct: true, choiceMapping: [...] } }
+      let bookmarksState = []; // [ "1", "2" ] - Bookmarked questionNo IDs
+      let filterStatus = "all"; // all, unanswered, correct, incorrect, bookmarked
+      let filterCaseId = "all"; // all, or specific Case ID string
+      let searchString = ""; // Search word queries match
+      let shuffleChoicesMode = false;
+
+      // UI Target Node Map Bindings
+      const activeQuestionText = document.getElementById("activeQuestionText");
+      const choicesContainer = document.getElementById("choicesContainer");
+      const explanationBox = document.getElementById("explanationBox");
+
+      const displayIndex = document.getElementById("displayIndex");
+      const displayTotal = document.getElementById("displayTotal");
+      const questionIdBadge = document.getElementById("questionIdBadge");
+
+      const prevQuestionBtn = document.getElementById("prevQuestionBtn");
+      const nextQuestionBtn = document.getElementById("nextQuestionBtn");
+      const bookmarkButton = document.getElementById("bookmarkButton");
+      const gridNavigator = document.getElementById("gridNavigator");
+
+      const statsAnswered = document.getElementById("statsAnswered");
+      const statsCorrect = document.getElementById("statsCorrect");
+      const statsWrong = document.getElementById("statsWrong");
+      const statsPercent = document.getElementById("statsPercent");
+      const linearProgressBar = document.getElementById("linearProgressBar");
+
+      const searchTerm = document.getElementById("searchTerm");
+      const statusFilter = document.getElementById("statusFilter");
+      const caseFilter = document.getElementById("caseFilter");
+      const shuffleQsBtn = document.getElementById("shuffleQsBtn");
+      const shuffleChoicesBtn = document.getElementById("shuffleChoicesBtn");
+      const shuffleChoicesText = document.getElementById("shuffleChoicesText");
+
+      const themeToggler = document.getElementById("themeToggler");
+      const themeIcon = document.getElementById("themeIcon");
+      const clearStateBtn = document.getElementById("clearStateBtn");
+      const navUploadBtn = document.getElementById("navUploadBtn");
+      const openAddModalBtn = document.getElementById("openAddModalBtn");
+
+      // Case Cards
+      const caseScenarioCard = document.getElementById("caseScenarioCard");
+      const caseHeaderLabel = document.getElementById("caseHeaderLabel");
+      const caseDescriptionText = document.getElementById(
+        "caseDescriptionText",
+      );
+
+      // Editor modal elements
+      const caseEditorModal = document.getElementById("caseEditorModal");
+      const modalContainer = document.getElementById("modalContainer");
+      const modalTitle = document.getElementById("modalTitle");
+      const caseForm = document.getElementById("caseForm");
+
+      const formYear = document.getElementById("formYear");
+      const formCaseId = document.getElementById("formCaseId");
+      const formCaseDescription = document.getElementById(
+        "formCaseDescription",
+      );
+      const formQuestionNo = document.getElementById("formQuestionNo");
+      const formQuestionText = document.getElementById("formQuestionText");
+      const formChoiceA = document.getElementById("formChoiceA");
+      const formChoiceB = document.getElementById("formChoiceB");
+      const formChoiceC = document.getElementById("formChoiceC");
+      const formChoiceD = document.getElementById("formChoiceD");
+      const formChoiceE = document.getElementById("formChoiceE");
+      const formAnswer = document.getElementById("formAnswer");
+      const formExplanation = document.getElementById("formExplanation");
+      const editOriginalNo = document.getElementById("editOriginalNo");
+
+      const closeModalBtn = document.getElementById("closeModalBtn");
+      const cancelFormBtn = document.getElementById("cancelFormBtn");
+      const editQuestionBtn = document.getElementById("editQuestionBtn");
+
+      // Temporary implicit input for excel trigger
+      let excelImporter;
+
+      // --- APPS INITIATION RUN ---
+      async function initApp() {
+        loadProgressOnlyFromLocalStorage();
+
+        rawQuestionsList = await autoLoadPLEExcelFiles();
+
+        if (
+          localStorage.getItem("theme") === "dark" ||
+          (!("theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
+          themeIcon.className = "fa-solid fa-sun text-sm";
+        } else {
+          document.documentElement.classList.remove("dark");
+          themeIcon.className = "fa-solid fa-moon text-sm";
+        }
+
+        syncAppState();
+
+        excelImporter = document.createElement("input");
+        excelImporter.type = "file";
+        excelImporter.accept = ".xlsx, .xls, .csv";
+        excelImporter.addEventListener("change", parseSpreadsheetFile);
+
+        navUploadBtn.addEventListener("click", () => {
+          excelImporter.click();
+        });
+      }
+      async function autoLoadPLEExcelFiles() {
+        const candidateFiles = [
+          "PLE_PC1_2563.xlsx",
+          "PLE_PC1_2564.xlsx",
+          "PLE_PC1_2565.xlsx",
+          "PLE_PC1_2566.xlsx",
+          "PLE_PC1_2567.xlsx",
+          "PLE_PC1_2568.xlsx",
+        ];
+
+        const allQuestions = [];
+
+        for (const fileName of candidateFiles) {
+          if (!/^PLE_PC1_\d+\.xlsx$/i.test(fileName)) continue;
+
+          try {
+            const response = await fetch(fileName, { cache: "no-store" });
+
+            if (!response.ok) {
+              console.warn(`ไม่พบไฟล์ ${fileName}`);
+              continue;
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+
+            const rows = XLSX.utils.sheet_to_json(worksheet, {
+              defval: "",
+            });
+
+            const questions = rows
+              .map((row, index) => {
+                const year = String(row["Year"] || "").trim();
+                const caseId = String(row["Case"] || "").trim();
+                const questionNo = Number(row["Question No"] || index + 1);
+
+                return {
+                  year,
+                  caseId,
+                  caseDescription: String(row["Case Description"] || "").trim(),
+                  id: Number(`${year}${String(questionNo).padStart(3, "0")}`),
+                  questionNo,
+                  question: String(row["Question"] || "").trim(),
+                  choices: {
+                    A: String(row["Choice A"] || "").trim(),
+                    B: String(row["Choice B"] || "").trim(),
+                    C: String(row["Choice C"] || "").trim(),
+                    D: String(row["Choice D"] || "").trim(),
+                    E: String(row["Choice E"] || "").trim(),
+                  },
+                  answer: normalizeAnswer(row["Answer"]),
+                  explanation: getExplanationFromRow(row),
+                };
+              })
+              .filter((q) => q.question && q.answer);
+
+            allQuestions.push(...questions);
+
+            console.log(`โหลด ${fileName} สำเร็จ: ${questions.length} ข้อ`);
+          } catch (err) {
+            console.warn(`โหลดไฟล์ ${fileName} ไม่สำเร็จ`, err);
+          }
+        }
+
+        if (allQuestions.length === 0) {
+          popCustomToast(
+            "ไม่พบไฟล์ Excel รูปแบบ PLE_PC1_[ปี].xlsx ในโฟลเดอร์เดียวกัน",
+            "error",
+          );
+        } else {
+          popCustomToast(
+            `โหลดข้อสอบจาก Excel สำเร็จ ${allQuestions.length} ข้อ`,
+            "success",
+          );
+        }
+
+        return allQuestions;
+      }
+      function normalizeAnswer(value) {
+        const answer = String(value || "")
+          .trim()
+          .toUpperCase();
+
+        const map = {
+          ก: "A",
+          ข: "B",
+          ค: "C",
+          ง: "D",
+          จ: "E",
+          A: "A",
+          B: "B",
+          C: "C",
+          D: "D",
+          E: "E",
+        };
+
+        return map[answer] || answer;
+      }
+      function getExplanationFromRow(row) {
+        return String(
+          row["explaination"] ||
+            row["Explaination"] ||
+            row["EXPLAINATION"] ||
+            row["explanation"] ||
+            row["Explanation"] ||
+            row["EXPLANATION"] ||
+            row["เฉลยละเอียด"] ||
+            row["คำอธิบาย"] ||
+            "",
+        ).trim();
+      }
+
+      // --- COMPILING QUERIES AND FILTERING SYSTEMS ---
+      function syncAppState(preserveCurrentIndex = false) {
+        updateCaseStudyFilterDropdown();
+
+        let workingSet = [];
+
+        rawQuestionsList.forEach((q) => {
+          const history = answersState[q.id];
+          const isAnswered = !!history;
+          const isCorrect = history && history.correct;
+          const isBookmarked = bookmarksState.includes(String(q.id));
+
+          // 1. Check Keywords match
+          const searchMatch =
+            searchString === "" ||
+            String(q.id).toLowerCase().includes(searchString) ||
+            q.question.toLowerCase().includes(searchString) ||
+            (q.caseDescription &&
+              q.caseDescription.toLowerCase().includes(searchString));
+
+          // 2. Status drop list filter matches
+          let statusMatch = false;
+          if (filterStatus === "all") statusMatch = true;
+          else if (filterStatus === "unanswered" && !isAnswered)
+            statusMatch = true;
+          else if (filterStatus === "correct" && isAnswered && isCorrect)
+            statusMatch = true;
+          else if (filterStatus === "incorrect" && isAnswered && !isCorrect)
+            statusMatch = true;
+          else if (filterStatus === "bookmarked" && isBookmarked)
+            statusMatch = true;
+
+          // 3. Case studies selection filter matches
+          let caseMatch = false;
+          if (filterCaseId === "all") {
+            caseMatch = true;
+          } else {
+            const qCase = q.caseId ? String(q.caseId).trim() : "none";
+            caseMatch = qCase === String(filterCaseId).trim();
+          }
+
+          if (searchMatch && statusMatch && caseMatch) {
+            workingSet.push(q);
+          }
+        });
+
+        // Set mapped index values
+        filteredQuestions = workingSet;
+
+        if (!preserveCurrentIndex) {
+          currentIndex = 0;
+        } else if (
+          currentIndex >= filteredQuestions.length &&
+          filteredQuestions.length > 0
+        ) {
+          currentIndex = filteredQuestions.length - 1;
+        }
+
+        renderDashboardScorecard();
+        renderNavigatorGridPanel();
+        renderActiveQuestionLayout();
+      }
+
+      // --- PRESENTATION COMPONENT RENDER ENGINES ---
+      function renderActiveQuestionLayout() {
+        if (filteredQuestions.length === 0) {
+          // Empty fallback layout
+          caseScenarioCard.classList.add("hidden");
+          activeQuestionText.innerHTML = `
+                      <div class="text-center py-12 text-slate-400">
+                          <i class="fa-regular fa-folder-open text-5xl mb-3 block"></i>
+                          <p class="font-bold text-base">ไม่พบข้อมูลข้อสอบ</p>
+                          <p class="text-xs text-slate-400 mt-1">ลองพิมพ์กล่องค้นหาใหม่ สลับฟิลเตอร์คัดเลือก หรือป้อนชุดข้อสอบของคุณเพิ่มได้</p>
+                      </div>
+                  `;
+          choicesContainer.innerHTML = "";
+          explanationBox.classList.add("hidden");
+          displayIndex.innerText = "0";
+          displayTotal.innerText = "0";
+          questionIdBadge.innerText = "";
+          prevQuestionBtn.disabled = true;
+          nextQuestionBtn.disabled = true;
+          return;
+        }
+
+        const q = filteredQuestions[currentIndex];
+        displayIndex.innerText = currentIndex + 1;
+        displayTotal.innerText = filteredQuestions.length;
+        questionIdBadge.innerText = `(ปี ${q.year || "-"} / Case ${q.caseId || "-"} / ข้อ ${q.questionNo || q.id})`;
+        activeQuestionText.innerText = q.question;
+
+        // Manage Patient Case display
+        if (q.caseDescription && q.caseDescription.trim() !== "") {
+          caseScenarioCard.classList.remove("hidden");
+          caseHeaderLabel.innerText = `Case ${q.caseId || "ทั่วไป"} ${q.year ? "- ปี " + q.year : ""}`;
+          caseDescriptionText.innerText = q.caseDescription;
+        } else {
+          caseScenarioCard.classList.add("hidden");
+        }
+
+        // Bookmark visual star toggle
+        const isBookmarked = bookmarksState.includes(String(q.id));
+        if (isBookmarked) {
+          bookmarkButton.className =
+            "p-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white transition shadow-sm";
+          bookmarkButton.innerHTML = `<i class="fa-solid fa-bookmark text-sm"></i>`;
+        } else {
+          bookmarkButton.className =
+            "p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-400 dark:text-slate-300 transition";
+          bookmarkButton.innerHTML = `<i class="fa-regular fa-bookmark text-sm"></i>`;
+        }
+
+        // Create Choices list ordering
+        const history = answersState[q.id];
+        let activeChoicesOrdering = ["A", "B", "C", "D", "E"];
+
+        if (history && history.choiceMapping) {
+          activeChoicesOrdering = history.choiceMapping;
+        } else if (shuffleChoicesMode) {
+          activeChoicesOrdering.sort(() => Math.random() - 0.5);
+        }
+
+        choicesContainer.innerHTML = "";
+        const isLocked = history && history.selected !== undefined;
+
+        activeChoicesOrdering.forEach((key) => {
+          const text = q.choices[key];
+          if (!text) return; // Prevent render null parameters
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "w-full text-left p-4 rounded-2xl border text-sm sm:text-base font-medium flex items-center justify-between transition-all duration-200 outline-none ";
+
+          if (!isLocked) {
+            button.className +=
+              "border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-indigo-50/20 dark:hover:bg-indigo-950/20 cursor-pointer text-slate-700 dark:text-slate-200";
+            button.innerHTML = `
+                          <div class="flex items-center space-x-3">
+                              <span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 dark:text-white flex items-center justify-center font-bold text-xs shrink-0">${key}</span>
+                              <span class="leading-relaxed pr-2">${text}</span>
+                          </div>
+                      `;
+            button.addEventListener("click", () =>
+              registerAnswerSubmit(q.id, key, activeChoicesOrdering),
+            );
+          } else {
+            button.disabled = true;
+            button.className += "cursor-default ";
+
+            const isChosen = history.selected === key;
+            const isCorrectAnswer = q.answer === key;
+
+            if (isCorrectAnswer) {
+              button.className +=
+                "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-bold ring-2 ring-emerald-500/20";
+              button.innerHTML = `
+                              <div class="flex items-center space-x-3">
+                                  <span class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0">${key}</span>
+                                  <span class="leading-relaxed pr-2">${text}</span>
+                              </div>
+                              <span class="text-emerald-600 dark:text-emerald-400 shrink-0 text-sm font-semibold flex items-center space-x-1">
+                                  <i class="fa-solid fa-check-circle text-lg animate-bounce"></i>
+                              </span>
+                          `;
+            } else if (isChosen) {
+              button.className +=
+                "border-rose-500 bg-rose-50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 font-bold ring-2 ring-rose-500/20";
+              button.innerHTML = `
+                              <div class="flex items-center space-x-3">
+                                  <span class="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold text-xs shrink-0">${key}</span>
+                                  <span class="leading-relaxed pr-2">${text}</span>
+                              </div>
+                              <span class="text-rose-600 dark:text-rose-400 shrink-0 text-sm font-semibold flex items-center space-x-1">
+                                  <i class="fa-solid fa-circle-xmark text-lg"></i>
+                              </span>
+                          `;
+            } else {
+              button.className +=
+                "border-slate-200 dark:border-slate-700 opacity-60 text-slate-500 dark:text-slate-400";
+              button.innerHTML = `
+                              <div class="flex items-center space-x-3">
+                                  <span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 dark:text-slate-400 flex items-center justify-center font-bold text-xs shrink-0">${key}</span>
+                                  <span class="leading-relaxed pr-2">${text}</span>
+                              </div>
+                          `;
+            }
+          }
+
+          choicesContainer.appendChild(button);
+        });
+
+        // Display explanations drawer if answered
+        if (isLocked) {
+          const correct = history.correct;
+          explanationBox.className = correct
+            ? "rounded-2xl p-5 mb-6 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 text-slate-700 dark:text-slate-300 transition-all duration-300 animate-fadeIn"
+            : "rounded-2xl p-5 mb-6 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 text-slate-700 dark:text-slate-300 transition-all duration-300 animate-fadeIn";
+
+          const explainDesc =
+            q.explanation && q.explanation.trim() !== ""
+              ? q.explanation
+              : "ไม่มีข้อมูลคำอธิบายอ้างอิงเพิ่มเติมสำหรับข้อสอบข้อนี้";
+
+          explanationBox.innerHTML = `
+                      <div class="flex items-start space-x-3">
+                          <div class="p-2 rounded-xl shrink-0 ${correct ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" : "bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400"}">
+                              <i class="${correct ? "fa-solid fa-circle-check" : "fa-solid fa-circle-xmark"} text-xl"></i>
+                          </div>
+                          <div class="space-y-1 w-full">
+                              <h4 class="font-bold text-sm ${correct ? "text-emerald-800 dark:text-emerald-400" : "text-rose-800 dark:text-rose-400"}">
+                                  ${correct ? "ตอบถูกต้อง!" : "ตอบผิดพลาด!"}
+                              </h4>
+                              <p class="text-xs text-slate-400 dark:text-slate-500 font-sarabun">เฉลยคือกุญแจข้อ: <span class="font-extrabold uppercase">${q.answer}</span></p>
+                              <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300 mt-2 font-medium bg-white/40 dark:bg-slate-900/40 p-3.5 rounded-lg border border-slate-100 dark:border-slate-800/40">${explainDesc}</p>
+                          </div>
+                      </div>
+                  `;
+          explanationBox.classList.remove("hidden");
+        } else {
+          explanationBox.classList.add("hidden");
+        }
+
+        prevQuestionBtn.disabled = currentIndex === 0;
+        nextQuestionBtn.disabled =
+          currentIndex === filteredQuestions.length - 1;
+
+        highlightActiveGridCell(currentIndex);
+      }
+
+      function registerAnswerSubmit(qId, selectedKey, choicesOrderingMap) {
+        const q = rawQuestionsList.find((item) => item.id === qId);
+        if (!q) return;
+
+        const isCorrect = q.answer === selectedKey;
+
+        answersState[qId] = {
+          selected: selectedKey,
+          correct: isCorrect,
+          choiceMapping: choicesOrderingMap,
+        };
+
+        saveToLocalStorage();
+        renderDashboardScorecard();
+        renderNavigatorGridPanel();
+        renderActiveQuestionLayout();
+      }
+
+      // --- DASHBOARD AND PROGRESS METRICS RENDER ---
+      function renderDashboardScorecard() {
+        let answered = 0;
+        let correct = 0;
+        let wrong = 0;
+
+        rawQuestionsList.forEach((q) => {
+          const hist = answersState[q.id];
+          if (hist && hist.selected !== undefined) {
+            answered++;
+            if (hist.correct) correct++;
+            else wrong++;
+          }
+        });
+
+        const total = rawQuestionsList.length;
+        statsAnswered.innerText = `${answered}/${total}`;
+        statsCorrect.innerText = correct;
+        statsWrong.innerText = wrong;
+
+        const percentage =
+          answered > 0 ? Math.round((correct / answered) * 100) : 0;
+        statsPercent.innerText = `${percentage}%`;
+
+        const percentageProgressWidth =
+          total > 0 ? (answered / total) * 100 : 0;
+        linearProgressBar.style.width = `${percentageProgressWidth}%`;
+      }
+
+      // --- RENDER SIDEBAR GRID BUTTONS PANEL ---
+      function renderNavigatorGridPanel() {
+        gridNavigator.innerHTML = "";
+        renderedGridCount.innerText = `${filteredQuestions.length} / ${rawQuestionsList.length}`;
+
+        filteredQuestions.forEach((q, idx) => {
+          const history = answersState[q.id];
+          const isAnswered = !!history;
+          const isCorrect = history && history.correct;
+
+          const cell = document.createElement("button");
+          cell.type = "button";
+          cell.innerText = q.questionNo || q.id;
+          cell.id = `nav-grid-${idx}`;
+          cell.className =
+            "p-2.5 text-xs font-bold rounded-xl border transition-all duration-150 text-center cursor-pointer outline-none ";
+
+          if (!isAnswered) {
+            cell.className +=
+              "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400";
+          } else if (isCorrect) {
+            cell.className +=
+              "bg-emerald-500 border-emerald-600 text-white hover:bg-emerald-600";
+          } else {
+            cell.className +=
+              "bg-rose-500 border-rose-600 text-white hover:bg-rose-600";
+          }
+
+          cell.addEventListener("click", () => {
+            currentIndex = idx;
+            renderActiveQuestionLayout();
+          });
+
+          gridNavigator.appendChild(cell);
+        });
+      }
+
+      function highlightActiveGridCell(idx) {
+        document.querySelectorAll('[id^="nav-grid-"]').forEach((el) => {
+          el.classList.remove(
+            "ring-4",
+            "ring-indigo-500/40",
+            "border-indigo-500",
+            "dark:border-indigo-400",
+          );
+        });
+
+        const targetCell = document.getElementById(`nav-grid-${idx}`);
+        if (targetCell) {
+          targetCell.classList.add(
+            "ring-4",
+            "ring-indigo-500/40",
+            "border-indigo-500",
+            "dark:border-indigo-400",
+          );
+          targetCell.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      }
+
+      // --- DYNAMIC SELECTOR UPDATE ENGINES ---
+      function updateCaseStudyFilterDropdown() {
+        let cases = new Set();
+        rawQuestionsList.forEach((q) => {
+          if (q.caseId && String(q.caseId).trim() !== "") {
+            cases.add(String(q.caseId).trim());
+          }
+        });
+
+        const sortedCases = Array.from(cases).sort(
+          (a, b) => Number(a) - Number(b) || a.localeCompare(b),
+        );
+        const selectedVal = caseFilter.value;
+
+        caseFilter.innerHTML = '<option value="all">ทุก Case</option>';
+        sortedCases.forEach((c) => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.innerText = `Case ${c}`;
+          caseFilter.appendChild(opt);
+        });
+
+        if (sortedCases.includes(selectedVal)) {
+          caseFilter.value = selectedVal;
+        } else {
+          caseFilter.value = "all";
+          filterCaseId = "all";
+        }
+      }
+
+      // --- ACTIONS CLICK LISTENERS ---
+
+      // Bookmark Trigger
+      bookmarkButton.addEventListener("click", () => {
+        if (filteredQuestions.length === 0) return;
+        const q = filteredQuestions[currentIndex];
+        const qIdStr = String(q.id);
+
+        const indexInBookmarks = bookmarksState.indexOf(qIdStr);
+        if (indexInBookmarks > -1) {
+          bookmarksState.splice(indexInBookmarks, 1);
+        } else {
+          bookmarksState.push(qIdStr);
+        }
+
+        saveToLocalStorage();
+        renderActiveQuestionLayout();
+
+        if (filterStatus === "bookmarked") {
+          syncAppState(true);
+        }
+      });
+
+      // Sliding questions pages
+      prevQuestionBtn.addEventListener("click", () => {
+        if (currentIndex > 0) {
+          currentIndex--;
+          renderActiveQuestionLayout();
+        }
+      });
+
+      nextQuestionBtn.addEventListener("click", () => {
+        if (currentIndex < filteredQuestions.length - 1) {
+          currentIndex++;
+          renderActiveQuestionLayout();
+        }
+      });
+
+      // Keyword searches and dropdowns filters changes listeners
+      searchTerm.addEventListener("input", (e) => {
+        searchString = e.target.value.toLowerCase().trim();
+        syncAppState();
+      });
+
+      statusFilter.addEventListener("change", (e) => {
+        filterStatus = e.target.value;
+        syncAppState();
+      });
+
+      caseFilter.addEventListener("change", (e) => {
+        filterCaseId = e.target.value;
+        syncAppState();
+      });
+
+      // Question randomizer shuffling
+      shuffleQsBtn.addEventListener("click", () => {
+        if (filteredQuestions.length <= 1) return;
+        filteredQuestions.sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        renderActiveQuestionLayout();
+        renderNavigatorGridPanel();
+        popCustomToast("สุ่มปรับลำดับรายการข้อสอบเรียบร้อยแล้ว!", "success");
+      });
+
+      // Shuffling choice key triggers
+      shuffleChoicesBtn.addEventListener("click", () => {
+        shuffleChoicesMode = !shuffleChoicesMode;
+        if (shuffleChoicesMode) {
+          shuffleChoicesBtn.className =
+            "flex items-center justify-center space-x-1.5 py-2.5 px-3 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold transition border border-indigo-200 dark:border-indigo-900/30";
+          shuffleChoicesText.innerText = "สลับชอยส์: เปิด";
+          popCustomToast("เปิดการทำงานสลับตัวเลือกสำเร็จ!", "info");
+        } else {
+          shuffleChoicesBtn.className =
+            "flex items-center justify-center space-x-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl text-xs font-bold transition";
+          shuffleChoicesText.innerText = "สลับชอยส์: ปิด";
+          popCustomToast("ปิดฟังก์ชันสลับตัวเลือก", "neutral");
+        }
+        saveToLocalStorage();
+        renderActiveQuestionLayout();
+      });
+
+      // --- MANUAL CASE EDITOR MODAL WORKFLOW ---
+      openAddModalBtn.addEventListener("click", () => {
+        modalTitle.innerText = "เพิ่มกรณีศึกษา / โจทย์ชุดใหม่ด้วยตนเอง";
+        caseForm.reset();
+        editOriginalNo.value = "";
+
+        let nextId = 1;
+        if (rawQuestionsList.length > 0) {
+          const mapIds = rawQuestionsList
+            .map((q) => Number(q.id))
+            .filter((id) => !isNaN(id));
+          if (mapIds.length > 0) {
+            nextId = Math.max(...mapIds) + 1;
+          }
+        }
+        formQuestionNo.value = nextId;
+        formYear.value = "2563"; // default baseline
+
+        if (
+          filteredQuestions.length > 0 &&
+          currentIndex < filteredQuestions.length
+        ) {
+          const cur = filteredQuestions[currentIndex];
+          if (cur.caseId) {
+            formCaseId.value = cur.caseId;
+            formCaseDescription.value = cur.caseDescription || "";
+            formYear.value = cur.year || "2563";
+          }
+        }
+
+        toggleModalState(true);
+      });
+
+      editQuestionBtn.addEventListener("click", () => {
+        if (filteredQuestions.length === 0) return;
+        const q = filteredQuestions[currentIndex];
+
+        modalTitle.innerText = `แก้ไขรายละเอียดข้อสอบข้อที่ ${q.id}`;
+        editOriginalNo.value = q.id;
+
+        // Fill elements
+        formYear.value = q.year || "";
+        formCaseId.value = q.caseId || "";
+        formCaseDescription.value = q.caseDescription || "";
+        formQuestionNo.value = q.id;
+        formQuestionText.value = q.question || "";
+        formChoiceA.value = q.choices.A || "";
+        formChoiceB.value = q.choices.B || "";
+        formChoiceC.value = q.choices.C || "";
+        formChoiceD.value = q.choices.D || "";
+        formChoiceE.value = q.choices.E || "";
+        formAnswer.value = q.answer || "A";
+        formExplanation.value = q.explanation || "";
+
+        toggleModalState(true);
+      });
+
+      function toggleModalState(isOpen) {
+        if (isOpen) {
+          caseEditorModal.classList.remove("hidden");
+          setTimeout(() => {
+            modalContainer.classList.remove("scale-95", "opacity-0");
+            modalContainer.classList.add("scale-100", "opacity-100");
+          }, 50);
+        } else {
+          modalContainer.classList.remove("scale-100", "opacity-100");
+          modalContainer.classList.add("scale-95", "opacity-0");
+          setTimeout(() => {
+            caseEditorModal.classList.add("hidden");
+          }, 150);
+        }
+      }
+
+      closeModalBtn.addEventListener("click", () => toggleModalState(false));
+      cancelFormBtn.addEventListener("click", () => toggleModalState(false));
+
+      caseForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const inputNumId = Number(formQuestionNo.value);
+        const editMarkerValue = editOriginalNo.value;
+
+        const payload = {
+          year: formYear.value.trim(),
+          caseId: formCaseId.value.trim(),
+          caseDescription: formCaseDescription.value.trim(),
+          id: inputNumId,
+          question: formQuestionText.value.trim(),
+          choices: {
+            A: formChoiceA.value.trim(),
+            B: formChoiceB.value.trim(),
+            C: formChoiceC.value.trim(),
+            D: formChoiceD.value.trim(),
+            E: formChoiceE.value.trim(),
+          },
+          answer: formAnswer.value,
+          explanation: formExplanation.value.trim(),
+        };
+
+        // Propagate case descriptions updates if editing a shared case ID
+        if (payload.caseId !== "") {
+          rawQuestionsList.forEach((q) => {
+            if (String(q.caseId).trim() === String(payload.caseId).trim()) {
+              q.caseDescription = payload.caseDescription;
+              q.year = payload.year;
+            }
+          });
+        }
+
+        if (editMarkerValue !== "") {
+          const origId = Number(editMarkerValue);
+          const idx = rawQuestionsList.findIndex((q) => q.id === origId);
+          if (idx > -1) {
+            rawQuestionsList[idx] = payload;
+            popCustomToast(
+              `แก้ไขเนื้อหาข้อสอบข้อที่ ${inputNumId} สำเร็จ!`,
+              "success",
+            );
+          }
+        } else {
+          const duplicateIndex = rawQuestionsList.findIndex(
+            (q) => q.id === inputNumId,
+          );
+          if (duplicateIndex > -1) {
+            const confirmOverwrite = confirm(
+              `รหัสข้อคำถามเลขที่ ${inputNumId} ซ้ำซ้อน มีอยู่อีกข้อในฐานข้อมูลหลัก ต้องการกดทับเขียนใหม่ใช่หรือไม่?`,
+            );
+            if (!confirmOverwrite) return;
+            rawQuestionsList[duplicateIndex] = payload;
+          } else {
+            rawQuestionsList.push(payload);
+          }
+          popCustomToast(
+            `เพิ่มโจทย์คำถามข้อที่ ${inputNumId} เข้าระบบคลังเรียบร้อย!`,
+            "success",
+          );
+        }
+
+        saveToLocalStorage();
+        toggleModalState(false);
+
+        if (editMarkerValue !== "") {
+          syncAppState(true);
+        } else {
+          syncAppState();
+          const matchedIdx = filteredQuestions.findIndex(
+            (q) => q.id === inputNumId,
+          );
+          if (matchedIdx > -1) {
+            currentIndex = matchedIdx;
+            renderActiveQuestionLayout();
+          }
+        }
+      });
+
+      // --- SHEETJS SPREADSHEET READ AND INTERPRETING PIPELINE ---
+      function parseSpreadsheetFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet);
+
+            if (rows.length === 0) {
+              popCustomToast(
+                "ไฟล์สเปรดชีตไม่มีข้อมูลโจทย์วิเคราะห์ใด ๆ",
+                "error",
+              );
+              return;
+            }
+
+            const alphabetMapTranslate = {
+              ก: "A",
+              ข: "B",
+              ค: "C",
+              ง: "D",
+              จ: "E",
+            };
+
+            // Fuzzy property resolver helper to match case-insensitive headers
+            function resolveVal(row, possibleKeys) {
+              for (let k of Object.keys(row)) {
+                const normalized = k.toLowerCase().replace(/[\s\_\-\.]/g, "");
+                for (let target of possibleKeys) {
+                  if (normalized === target || normalized.includes(target)) {
+                    return row[k];
+                  }
+                }
+              }
+              return "";
+            }
+
+            const parsed = rows.map((row, idx) => {
+              // Extract properties with flexible alias headers
+              const rawId = resolveVal(row, [
+                "questionno",
+                "no",
+                "ลำดับ",
+                "เลขข้อ",
+                "ข้อที่",
+                "qno",
+              ]);
+              const qNo = rawId ? Number(rawId) : idx + 1;
+
+              const questionText = resolveVal(row, [
+                "question",
+                "โจทย์",
+                "คำถาม",
+                "โจทย์คำถาม",
+              ]);
+              const yearVal = resolveVal(row, ["year", "ปี", "พศ"]);
+              const caseNo = resolveVal(row, [
+                "case",
+                "เคส",
+                "เลขเคส",
+                "caseid",
+              ]);
+              const caseDesc = resolveVal(row, [
+                "casedescription",
+                "description",
+                "รายละเอียดเคส",
+                "สถานการณ์",
+              ]);
+              const expVal = resolveVal(row, [
+                "explanation",
+                "อธิบาย",
+                "เฉลยละเอียด",
+                "คำอธิบาย",
+              ]);
+
+              // Choices mapping aliases
+              const choiceA = resolveVal(row, [
+                "choicea",
+                "a",
+                "ตัวเลือกa",
+                "ก",
+                "ตัวเลือกก",
+              ]);
+              const choiceB = resolveVal(row, [
+                "choiceb",
+                "b",
+                "ตัวเลือกb",
+                "ข",
+                "ตัวเลือกข",
+              ]);
+              const choiceC = resolveVal(row, [
+                "choicec",
+                "c",
+                "ตัวเลือกc",
+                "ค",
+                "ตัวเลือกค",
+              ]);
+              const choiceD = resolveVal(row, [
+                "choiced",
+                "d",
+                "ตัวเลือกd",
+                "ง",
+                "ตัวเลือกง",
+              ]);
+              const choiceE = resolveVal(row, [
+                "choicee",
+                "e",
+                "ตัวเลือกe",
+                "จ",
+                "ตัวเลือกจ",
+              ]);
+
+              let ans = String(
+                resolveVal(row, ["answer", "เฉลย", "คำตอบ"]) || "",
+              ).trim();
+              if (alphabetMapTranslate[ans]) {
+                ans = alphabetMapTranslate[ans];
+              }
+              ans = ans.toUpperCase();
+
+              return {
+                year: yearVal ? String(yearVal).trim() : "2563",
+                caseId: caseNo ? String(caseNo).trim() : "",
+                caseDescription: caseDesc ? String(caseDesc).trim() : "",
+                id: qNo,
+                question: questionText || "ไม่มีข้อความโจทย์คำถามวิเคราะห์",
+                choices: {
+                  A: choiceA || "",
+                  B: choiceB || "",
+                  C: choiceC || "",
+                  D: choiceD || "",
+                  E: choiceE || "",
+                },
+                answer: ans,
+                explanation: expVal || "",
+              };
+            });
+
+            // Overwrite memory catalogs and wipe progress
+            rawQuestionsList = parsed;
+            answersState = {};
+            bookmarksState = [];
+            saveToLocalStorage();
+
+            syncAppState();
+            popCustomToast(
+              `นำเข้าสำเร็จ! ตรวจพบข้อมูลข้อสอบทั้งสิ้น ${parsed.length} ข้อ`,
+              "success",
+            );
+          } catch (err) {
+            console.error("Reader Error: ", err);
+            popCustomToast(
+              "โครงสร้างไฟล์ล้มเหลว กรุณาจัดเรียงคอลัมน์ใหม่",
+              "error",
+            );
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      // --- LOCAL STORAGE PERSISTENCE SYSTEMS ---
+      function saveToLocalStorage() {
+        localStorage.setItem(
+          "local_pharmacy_answersState_v4",
+          JSON.stringify(answersState),
+        );
+        localStorage.setItem(
+          "local_pharmacy_bookmarksState_v4",
+          JSON.stringify(bookmarksState),
+        );
+        localStorage.setItem(
+          "local_pharmacy_shuffleChoices_v4",
+          JSON.stringify(shuffleChoicesMode),
+        );
+      }
+
+      function loadProgressOnlyFromLocalStorage() {
+        const answers = localStorage.getItem("local_pharmacy_answersState_v4");
+        const bookmarks = localStorage.getItem(
+          "local_pharmacy_bookmarksState_v4",
+        );
+        const shuffle = localStorage.getItem(
+          "local_pharmacy_shuffleChoices_v4",
+        );
+
+        if (answers) answersState = JSON.parse(answers);
+        if (bookmarks) bookmarksState = JSON.parse(bookmarks);
+
+        if (shuffle) {
+          shuffleChoicesMode = JSON.parse(shuffle);
+        }
+      }
+      // Wipe database cache and reload defaults
+      clearStateBtn.addEventListener("click", async () => {
+        const confirmed = confirm(
+          "คุณแน่ใจใช่หรือไม่ว่าต้องการล้างประวัติการทำควิซและบุ๊กมาร์กทั้งหมด?",
+        );
+
+        if (confirmed) {
+          localStorage.removeItem("local_pharmacy_answersState_v4");
+          localStorage.removeItem("local_pharmacy_bookmarksState_v4");
+          localStorage.removeItem("local_pharmacy_shuffleChoices_v4");
+          localStorage.removeItem("local_pharmacy_questionsSet_v4");
+
+          answersState = {};
+          bookmarksState = [];
+          shuffleChoicesMode = false;
+
+          rawQuestionsList = await autoLoadPLEExcelFiles();
+          syncAppState();
+
+          popCustomToast("ล้างความคืบหน้าและโหลด Excel ใหม่แล้ว", "success");
+        }
+      });
+      // --- MICRO-INTERACTIONS TOAST NOTIFICATION ---
+      function popCustomToast(message, type = "neutral") {
+        const oldToast = document.getElementById("app-toast");
+        if (oldToast) oldToast.remove();
+
+        const toast = document.createElement("div");
+        toast.id = "app-toast";
+        toast.className =
+          "fixed bottom-5 right-5 z-50 px-5 py-3.5 rounded-2xl shadow-xl border text-sm font-bold flex items-center space-x-2.5 animate-bounce transition-all duration-300 ";
+
+        if (type === "success") {
+          toast.className += "bg-emerald-500 border-emerald-600 text-white";
+          toast.innerHTML = `<i class="fa-solid fa-circle-check text-lg"></i> <span>${message}</span>`;
+        } else if (type === "error") {
+          toast.className += "bg-rose-500 border-rose-600 text-white";
+          toast.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-lg"></i> <span>${message}</span>`;
+        } else if (type === "info") {
+          toast.className += "bg-indigo-600 border-indigo-700 text-white";
+          toast.innerHTML = `<i class="fa-solid fa-circle-info text-lg"></i> <span>${message}</span>`;
+        } else {
+          toast.className +=
+            "bg-slate-800 border-slate-900 text-white dark:bg-slate-700 dark:border-slate-600";
+          toast.innerHTML = `<i class="fa-solid fa-bell text-lg"></i> <span>${message}</span>`;
+        }
+
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add("opacity-0");
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+
+      // --- DARK MODE THEME CONTROLS ---
+      themeToggler.addEventListener("click", () => {
+        if (document.documentElement.classList.contains("dark")) {
+          document.documentElement.classList.remove("dark");
+          localStorage.setItem("theme", "light");
+          themeIcon.className = "fa-solid fa-moon text-sm";
+          popCustomToast("สลับเข้าสู่โหมดโทนสีสว่าง (Light Mode)", "neutral");
+        } else {
+          document.documentElement.classList.add("dark");
+          localStorage.setItem("theme", "dark");
+          themeIcon.className = "fa-solid fa-sun text-sm";
+          popCustomToast("สลับเข้าสู่โหมดโทนสีมืด (Dark Mode)", "neutral");
+        }
+      });
+
+      // Start initialization process on DOM load
+      window.addEventListener("DOMContentLoaded", initApp);
+    </script>
+  </body>
+</html>

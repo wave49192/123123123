@@ -51,7 +51,7 @@
 <i class="fa-solid fa-moon text-sm" id="themeIcon"></i>
 </button>
 <!-- Reset Cache Button -->
-<button class="hidden flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-600 transition" id="backToYearsBtn" title="กลับไปเลือกปี"><i class="fa-solid fa-table-cells-large"></i><span>เลือกปี</span></button><button class="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 transition text-sm" id="clearStateBtn" title="ล้างความคืบหน้า">
+<button class="hidden flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-600 transition" id="backToYearsBtn" title="กลับไปเลือกปี"><i class="fa-solid fa-table-cells-large"></i><span>เลือกปี</span></button><button class="hidden flex items-center space-x-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-3 py-2 rounded-xl text-xs font-semibold border border-amber-200 dark:border-amber-900/30 transition" id="saveSessionBtn" title="บันทึกคะแนนรอบนี้"><i class="fa-solid fa-floppy-disk"></i><span>บันทึกคะแนน</span></button><button class="flex items-center space-x-1.5 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/50 text-violet-600 dark:text-violet-400 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-200 dark:border-violet-900/30 transition" id="openHistoryBtn" title="ดูประวัติการทำข้อสอบ"><i class="fa-solid fa-clock-rotate-left"></i><span>ประวัติ</span></button><button class="p-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 transition text-sm" id="clearStateBtn" title="ล้างความคืบหน้า">
 <i class="fa-solid fa-arrow-rotate-left"></i>
 </button>
 </div>
@@ -364,6 +364,32 @@
 </form>
 </div>
 </div>
+
+<!-- SESSION HISTORY MODAL -->
+<div class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4" id="sessionHistoryModal">
+  <div class="bg-white dark:bg-slate-800 w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh] overflow-hidden">
+    <div class="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-violet-50/50 to-white dark:from-slate-800 dark:to-slate-800">
+      <div>
+        <h3 class="text-lg font-extrabold text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-violet-500"></i> ประวัติการทำข้อสอบ</h3>
+        <p class="text-xs text-slate-400 mt-1">เก็บในเครื่องนี้ผ่าน localStorage</p>
+      </div>
+      <button id="closeHistoryBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-6 overflow-y-auto space-y-4">
+      <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <p id="historySummaryText" class="text-sm text-slate-500 dark:text-slate-400 font-semibold">ยังไม่มีประวัติ</p>
+        <div class="flex gap-2 flex-wrap">
+          <button id="exportHistoryBtn" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold"><i class="fa-solid fa-download mr-1"></i> Export JSON</button>
+          <button id="importHistoryBtn" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-xs font-bold"><i class="fa-solid fa-upload mr-1"></i> Import JSON</button>
+          <button id="clearHistoryBtn" class="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold"><i class="fa-solid fa-trash mr-1"></i> ลบประวัติทั้งหมด</button>
+        </div>
+      </div>
+      <div id="historyList" class="space-y-3"></div>
+      <input type="file" id="historyImportInput" accept=".json,application/json" class="hidden" />
+    </div>
+  </div>
+</div>
+
 <!-- PRE-LOADED DATA EMBED (Contains questions from your real dataset!) -->
 <!-- CORE ENGINE CODES -->
 <script src="script.js"></script>
